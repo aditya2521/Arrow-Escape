@@ -9,6 +9,7 @@ import { EasybrainHeader } from '../components/ui/EasybrainHeader';
 import { MazeBoard, MazeBoardRef } from '../components/board/MazeBoard';
 import { CircularBoosters } from '../components/ui/CircularBoosters';
 import { TrainBrainModal } from '../components/ui/TrainBrainModal';
+import { DEFAULT_GAME_SETTINGS, GameStorage } from '../storage/gameStorage';
 
 type GameScreenProps = NativeStackScreenProps<RootStackParamList, 'Game'>;
 
@@ -17,12 +18,21 @@ export const GameScreen: React.FC<GameScreenProps> = ({ route, navigation }) => 
   const [zoomScale, setZoomScale] = useState<number>(1.0);
   const mazeBoardRef = useRef<MazeBoardRef>(null);
 
-  const [settings, setSettings] = useState<GameSettings>({
-    soundEnabled: true,
-    hapticsEnabled: true,
-    vibrationOnBump: true,
-    darkMode: false,
-  });
+  const [settings, setSettings] = useState<GameSettings>(DEFAULT_GAME_SETTINGS);
+
+  useEffect(() => {
+    let mounted = true;
+    GameStorage.getSettings().then((saved) => mounted && setSettings(saved));
+    return () => { mounted = false; };
+  }, []);
+
+  const updateSettings = (update: Partial<GameSettings>) => {
+    setSettings((previous) => {
+      const next = { ...previous, ...update };
+      void GameStorage.saveSettings(next);
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (route.params?.levelId) {
@@ -103,12 +113,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({ route, navigation }) => 
           onZoomOut={() => mazeBoardRef.current?.zoomOut()}
           onResetZoom={() => mazeBoardRef.current?.resetZoom()}
           onBack={handleBack}
-          onToggleSound={() =>
-            setSettings((prev) => ({ ...prev, soundEnabled: !prev.soundEnabled }))
-          }
-          onToggleHaptics={() =>
-            setSettings((prev) => ({ ...prev, hapticsEnabled: !prev.hapticsEnabled }))
-          }
+          onToggleSound={() => updateSettings({ soundEnabled: !settings.soundEnabled })}
+          onToggleHaptics={() => updateSettings({ hapticsEnabled: !settings.hapticsEnabled })}
         />
 
         {/* Maze Grid Board */}

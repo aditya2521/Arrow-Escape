@@ -105,7 +105,7 @@ export const LevelSelectScreen: React.FC<LevelSelectScreenProps> = ({ navigation
             return <View style={styles.levelCardFiller} />;
           }
           const completed = !!progressMap[lvl.id]?.completed;
-          const locked = false; // All 250 levels unlocked!
+          const locked = false; // All levels are currently available.
           const stageName = lvl.name.replace(/\s+\d+$/, '');
           const tint = lvl.themeColor ?? INK;
           const bg = lvl.bgColor ?? '#F5F5F4';

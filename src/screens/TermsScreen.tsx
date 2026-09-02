@@ -60,7 +60,7 @@ export const TermsScreen: React.FC<Props> = ({ navigation }) => {
 
         <Section number={2} heading="What we own, what you own">
           <P>
-            Arrow Escape — including its name, logo, artwork, all 250 levels,
+            Arrow Escape — including its name, logo, artwork, all 500 levels,
             code, sound, and design — is owned by us and protected by
             copyright.
           </P>
@@ -133,7 +133,7 @@ export const TermsScreen: React.FC<Props> = ({ navigation }) => {
           </P>
         </Section>
 
-        <ContactCard email="support@arrowescape.app" />
+        <ContactCard email="aditya159121@gmail.com" />
 
         <View style={{ height: 24 }} />
       </ScrollView>

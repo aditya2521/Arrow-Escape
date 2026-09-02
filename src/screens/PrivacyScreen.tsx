@@ -68,7 +68,7 @@ export const PrivacyScreen: React.FC<Props> = ({ navigation }) => {
           <P>Anything we do collect is used only to:</P>
           <LI>Keep Arrow Escape running smoothly.</LI>
           <LI>Diagnose crashes and fix bugs.</LI>
-          <LI>Understand which of the 250 levels players enjoy.</LI>
+          <LI>Understand which of the 500 levels players enjoy.</LI>
         </Section>
 
         <Section number={4} heading="Advertising">
@@ -106,7 +106,7 @@ export const PrivacyScreen: React.FC<Props> = ({ navigation }) => {
           </P>
         </Section>
 
-        <ContactCard email="support@arrowescape.app" />
+        <ContactCard email="aditya159121@gmail.com" />
 
         <View style={{ height: 24 }} />
       </ScrollView>

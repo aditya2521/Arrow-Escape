@@ -20,7 +20,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#090B10"
+        "backgroundColor": "#000000"
       },
       "package": "com.arrowescape.app"
     },

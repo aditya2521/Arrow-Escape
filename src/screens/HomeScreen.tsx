@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import Svg, { Path, G } from 'react-native-svg';
@@ -29,19 +29,31 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             </View>
             <Text style={styles.brandText}>ARROW ESCAPE</Text>
           </View>
-          <View style={styles.levelCountPill}>
-            <Text style={styles.levelCount}>{TOTAL_LEVELS}</Text>
-            <Text style={styles.levelLabel}> LEVELS</Text>
+          <View style={styles.topActions}>
+            <View style={styles.levelCountPill}>
+              <Text style={styles.levelCount}>{TOTAL_LEVELS}</Text>
+              <Text style={styles.levelLabel}> LEVELS</Text>
+            </View>
+            <Pressable
+              onPress={() => navigation.navigate('Settings')}
+              accessibilityRole="button"
+              accessibilityLabel="Open settings"
+              style={({ pressed }) => [styles.settingsButton, pressed && styles.pressed]}
+            >
+              <Text style={styles.settingsIcon}>⚙</Text>
+            </Pressable>
           </View>
         </View>
 
         <View style={styles.heroWrap}>
           <View style={styles.heroGraphicCard}>
-            <View style={styles.cardGlow} />
-            <View style={styles.cardGridDotTop} />
-            <View style={styles.cardGridDotBottom} />
             <View style={styles.heroGraphicInner}>
-              <ArrowHeroGraphic />
+              <Image
+                source={require('../../assets/images/icon.png')}
+                style={styles.heroLogo}
+                resizeMode="cover"
+                accessibilityLabel="Arrow Escape maze logo"
+              />
             </View>
           </View>
 
@@ -71,7 +83,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             </View>
             <View style={styles.awardsCopy}>
               <Text style={styles.awardsTitle}>Milestone Awards</Text>
-              <Text style={styles.awardsSubtitle}>Earn a reward every 10 levels</Text>
+              <Text style={styles.awardsSubtitle}>Reach special milestones for rewards</Text>
             </View>
             <Text style={styles.awardsChevron}>›</Text>
           </Pressable>
@@ -296,6 +308,18 @@ const styles = StyleSheet.create({
   },
   levelCount: { color: PLAY_DARK, fontSize: 12, fontWeight: '900' },
   levelLabel: { color: '#64748B', fontSize: 9, fontWeight: '800', letterSpacing: 0.7 },
+  topActions: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  settingsButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  settingsIcon: { color: INK, fontSize: 19, fontWeight: '800' },
 
   heroWrap: {
     flex: 1,
@@ -309,47 +333,26 @@ const styles = StyleSheet.create({
     width: 244,
     height: 244,
     borderRadius: 42,
-    backgroundColor: '#F7F9FF',
-    borderWidth: 1,
-    borderColor: '#DCE5FF',
+    backgroundColor: '#000000',
+    borderWidth: 2,
+    borderColor: '#1E293B',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#1E3A8A',
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 14 },
-    shadowOpacity: 0.09,
+    shadowOpacity: 0.2,
     shadowRadius: 24,
     elevation: 5,
     overflow: 'hidden',
   },
-  cardGlow: {
-    position: 'absolute',
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    backgroundColor: '#E8EEFF',
-    top: -85,
-    right: -80,
-    opacity: 0.75,
+  heroGraphicInner: {
+    width: '100%',
+    height: '100%',
   },
-  cardGridDotTop: {
-    position: 'absolute',
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: '#93C5FD',
-    top: 24,
-    left: 26,
+  heroLogo: {
+    width: '100%',
+    height: '100%',
   },
-  cardGridDotBottom: {
-    position: 'absolute',
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: '#C7D2FE',
-    bottom: 26,
-    right: 28,
-  },
-  heroGraphicInner: { transform: [{ scale: 0.88 }] },
   copyBlock: {
     alignItems: 'center',
     gap: 6,

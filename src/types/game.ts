@@ -71,6 +71,7 @@ export type RootStackParamList = {
   Home: undefined;
   LevelSelect: undefined;
   Awards: undefined;
+  Settings: undefined;
   Game: { levelId: number };
   Privacy: undefined;
   Terms: undefined;
