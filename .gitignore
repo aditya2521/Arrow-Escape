@@ -1,0 +1,25 @@
+.DS_Store
+
+# Dependencies and Expo caches
+node_modules/
+.expo/
+.expo-shared/
+.metro-health-check*
+
+# Generated build output
+build/
+dist/
+coverage/
+ios/Pods/
+ios/build/
+ios/DerivedData/
+android/.gradle/
+android/build/
+android/app/build/
+
+# Local tooling and logs
+*.log
+*.tsbuildinfo
+.env
+.env.*
+!.env.example

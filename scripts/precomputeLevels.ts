@@ -1,0 +1,150 @@
+/**
+ * Build-time script: generates all 250 matrix levels and writes them out as a
+ * static TypeScript module. Runtime code loads the constant directly — no
+ * generation on device, no delay when tapping a level.
+ *
+ * Run with:  npx tsx scripts/precomputeLevels.ts
+ */
+import * as fs from 'fs';
+import * as path from 'path';
+import { MATRIX_LEVEL_SPECS } from '../src/engine/matrixLevels';
+import { arrowPatternSignature, generateSnakeMazeLevel } from '../src/engine/mazeGenerator';
+import { isLevelSolvable } from '../src/engine/solver';
+import { MultiCellArrow } from '../src/types/game';
+
+const OUT_PATH = path.join(__dirname, '..', 'src', 'engine', 'precomputedLevels.ts');
+
+const start = Date.now();
+const levels: unknown[] = [];
+let unsolvable: string[] = [];
+let invalidLengths: string[] = [];
+let undersized: string[] = [];
+let repetitive: string[] = [];
+let misalignedHeads: string[] = [];
+const fingerprints = new Set<string>();
+
+for (let i = 0; i < MATRIX_LEVEL_SPECS.length; i++) {
+  const art = MATRIX_LEVEL_SPECS[i];
+  const t0 = Date.now();
+  // Search deterministic seeds until the layout is both solvable and contains
+  // no tiny arrow fragments.
+  // until we find a solvable layout for problematic masks.
+  let lvl: any = null;
+  let arrows: MultiCellArrow[] = [];
+  let ok = false;
+  let lengthOk = false;
+  let countOk = false;
+  let varietyOk = false;
+  let directionOk = false;
+  let attemptsUsed = 0;
+  for (let attempt = 0; attempt < 60; attempt++) {
+    attemptsUsed = attempt + 1;
+    const idForGen = (i + 1) + attempt * 10007;
+    lvl = generateSnakeMazeLevel(
+      idForGen,
+      art.name,
+      art.mask,
+      art.difficulty,
+      art.themeColor,
+      art.bgColor,
+      art.borderColor,
+      0
+    );
+    arrows = lvl.arrows.map((a: any) => ({
+      id: a.id!,
+      head: a.head,
+      tail: a.tail,
+      direction: a.direction,
+    }));
+    ok = isLevelSolvable(lvl.rows, lvl.cols, arrows);
+    lengthOk = Math.min(...arrows.map((arrow) => arrow.tail.length)) >= 2;
+    const tierArrowFloor = art.rows >= 42 ? 160 : art.rows >= 39 ? 125 : art.rows >= 36 ? 110 : art.rows >= 34 ? 100 : 90;
+    countOk = arrows.length >= tierArrowFloor;
+    const patternCounts = new Map<string, number>();
+    for (const arrow of arrows) {
+      const key = arrowPatternSignature(arrow.tail);
+      patternCounts.set(key, (patternCounts.get(key) ?? 0) + 1);
+    }
+    varietyOk = Math.max(...patternCounts.values()) <= 8;
+    directionOk = arrows.every((arrow) => {
+      const neck = arrow.tail[arrow.tail.length - 2];
+      if (!neck) return false;
+      const expected = arrow.head.row < neck.row
+        ? 'up'
+        : arrow.head.row > neck.row
+          ? 'down'
+          : arrow.head.col < neck.col
+            ? 'left'
+            : 'right';
+      return arrow.direction === expected;
+    });
+    if (ok && lengthOk && countOk && varietyOk && directionOk) break;
+  }
+  // Normalize id to sequential (1..N) regardless of internal seed we ended up using
+  lvl.id = i + 1;
+  if (!ok) unsolvable.push(`L${i + 1} ${art.name}`);
+  const shortest = Math.min(...lvl.arrows.map((arrow: MultiCellArrow) => arrow.tail.length));
+  if (shortest < 2) invalidLengths.push(`L${i + 1} ${art.name} (shortest=${shortest})`);
+  const requiredCount = art.rows >= 42 ? 160 : art.rows >= 39 ? 125 : art.rows >= 36 ? 110 : art.rows >= 34 ? 100 : 90;
+  if (lvl.arrows.length < requiredCount) undersized.push(`L${i + 1} ${art.name} (arrows=${lvl.arrows.length}, required=${requiredCount})`);
+  if (!varietyOk) repetitive.push(`L${i + 1} ${art.name}`);
+  if (!directionOk) misalignedHeads.push(`L${i + 1} ${art.name}`);
+  const fingerprint = JSON.stringify(lvl.arrows.map((arrow: MultiCellArrow) => [
+    arrow.head.row,
+    arrow.head.col,
+    arrow.direction,
+    arrow.tail,
+  ]));
+  if (fingerprints.has(fingerprint)) {
+    console.error(`\nABORT — duplicate matrix layout at L${i + 1} ${art.name}`);
+    process.exit(1);
+  }
+  fingerprints.add(fingerprint);
+  console.log(
+    `L${(i + 1).toString().padStart(2)} ${art.name.padEnd(22)}` +
+      ` arrows=${lvl.arrows.length.toString().padStart(4)}  ${Date.now() - t0}ms  ${ok ? 'OK' : 'UNSOLVABLE'}` +
+      (attemptsUsed > 1 ? `  (attempts=${attemptsUsed})` : '')
+  );
+  levels.push(lvl);
+}
+
+if (unsolvable.length) {
+  console.error('\nABORT — unsolvable levels:', unsolvable);
+  process.exit(1);
+}
+
+if (invalidLengths.length) {
+  console.error('\nABORT — levels contain invalid single-cell arrows:', invalidLengths);
+  process.exit(1);
+}
+
+if (undersized.length) {
+  console.error('\nABORT — matrix levels below the 90-arrow floor:', undersized);
+  process.exit(1);
+}
+
+if (repetitive.length) {
+  console.error('\nABORT — levels exceeded the repeated-pattern safety limit:', repetitive);
+  process.exit(1);
+}
+
+if (misalignedHeads.length) {
+  console.error('\nABORT — levels contain arrowheads misaligned with their neck:', misalignedHeads);
+  process.exit(1);
+}
+
+const header = `// AUTO-GENERATED by scripts/precomputeLevels.ts — do not edit by hand.
+// Run: npx tsx scripts/precomputeLevels.ts
+
+import { LevelDefinition } from '../types/game';
+
+export const PRECOMPUTED_LEVELS: LevelDefinition[] = `;
+
+// Minified JSON to keep bundle size small
+fs.writeFileSync(OUT_PATH, header + JSON.stringify(levels) + ';\n', 'utf8');
+
+const totalMs = Date.now() - start;
+const kb = (fs.statSync(OUT_PATH).size / 1024).toFixed(1);
+console.log(
+  `\nWrote ${levels.length} levels to ${path.relative(process.cwd(), OUT_PATH)} (${kb} KB) in ${totalMs}ms`
+);
