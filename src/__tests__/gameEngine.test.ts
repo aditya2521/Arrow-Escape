@@ -9,18 +9,20 @@ import {
 import { MultiCellArrow } from '../types/game';
 
 describe('Easybrain MultiCellArrow Engine Tests', () => {
-  it('instantly provides 250 unique level metadata records with 0 repeats', () => {
-    expect(TOTAL_LEVELS).toBe(250);
-    expect(ALL_LEVEL_METADATA.length).toBe(250);
-    expect(ALL_EASYBRAIN_LEVELS.length).toBe(250);
+  it('instantly provides 500 unique level metadata records with 0 repeats', () => {
+    expect(TOTAL_LEVELS).toBe(500);
+    expect(ALL_LEVEL_METADATA.length).toBe(500);
+    expect(ALL_EASYBRAIN_LEVELS.length).toBe(500);
 
-    // Verify all 250 levels have unique names
+    // Verify all 500 levels have unique names
     const names = new Set(ALL_LEVEL_METADATA.map((l) => l.name));
-    expect(names.size).toBe(250);
+    expect(names.size).toBe(500);
 
     expect(ALL_LEVEL_METADATA[0].name).toBe('Foundations 001');
     expect(ALL_LEVEL_METADATA[20].name).toBe('Crossroads 021');
     expect(ALL_LEVEL_METADATA[249].name).toBe('Master Grid 250');
+    expect(ALL_LEVEL_METADATA[250].name).toBe('Precision 251');
+    expect(ALL_LEVEL_METADATA[499].name).toBe('Grandmaster 500');
   });
 
   it('correctly handles multi-cell occupancy and collision detection', () => {
@@ -83,7 +85,7 @@ describe('Easybrain MultiCellArrow Engine Tests', () => {
   });
 
   it('ensures sample matrix levels have 0 cell overlaps, no jumps, and are 100% solvable', () => {
-    const sampleIds = [1, 2, 3, 4, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 75, 100, 125, 150, 175, 200, 225, 250];
+    const sampleIds = [1, 2, 3, 4, 5, 10, 20, 50, 100, 150, 200, 250, 275, 300, 325, 350, 375, 400, 425, 450, 475, 500];
 
     for (const id of sampleIds) {
       const level = getEasybrainLevelById(id);

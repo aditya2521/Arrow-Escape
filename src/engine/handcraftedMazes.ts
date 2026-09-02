@@ -22,7 +22,7 @@ export const ALL_LEVEL_METADATA = getAllLevelMetadata();
 
 /**
  * Retrieves a specific pre-computed level by ID (0ms — no runtime generation).
- * All 250 levels are baked at build time via scripts/precomputeLevels.ts.
+ * All 500 levels are baked at build time via scripts/precomputeLevels.ts.
  */
 export function getEasybrainLevelById(id: number): LevelDefinition {
   const levelId = Math.max(1, Math.min(TOTAL_LEVELS, id));

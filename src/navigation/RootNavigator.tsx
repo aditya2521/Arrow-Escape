@@ -7,6 +7,7 @@ import { GameScreen } from '../screens/GameScreen';
 import { PrivacyScreen } from '../screens/PrivacyScreen';
 import { TermsScreen } from '../screens/TermsScreen';
 import { AwardsScreen } from '../screens/AwardsScreen';
+import { SettingsScreen } from '../screens/SettingsScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -23,6 +24,7 @@ export const RootNavigator: React.FC = () => {
       <Stack.Screen name="Home" component={HomeScreen} />
       <Stack.Screen name="LevelSelect" component={LevelSelectScreen} />
       <Stack.Screen name="Awards" component={AwardsScreen} />
+      <Stack.Screen name="Settings" component={SettingsScreen} />
       <Stack.Screen name="Game" component={GameScreen} />
       <Stack.Screen name="Privacy" component={PrivacyScreen} />
       <Stack.Screen name="Terms" component={TermsScreen} />

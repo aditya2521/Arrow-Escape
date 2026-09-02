@@ -11,7 +11,6 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
-  withSpring,
   runOnJS,
 } from 'react-native-reanimated';
 import {
@@ -66,10 +65,12 @@ export const MazeBoard = forwardRef<MazeBoardRef, MazeBoardProps>(
     const [containerSize, setContainerSize] = useState<{ width: number; height: number }>(
       estimatedInitialSize
     );
+    const [renderZoom, setRenderZoom] = useState(1.0);
 
-    // Zoom & Pan shared values
+    // `gestureScale` is only used while a pinch is active. Completed zooms are
+    // committed to `renderZoom`, which redraws the SVG at its real pixel size
+    // instead of magnifying a low-resolution layer.
     const scale = useSharedValue(1.0);
-    const savedScale = useSharedValue(1.0);
     const translateX = useSharedValue(0);
     const savedTranslateX = useSharedValue(0);
     const translateY = useSharedValue(0);
@@ -90,8 +91,9 @@ export const MazeBoard = forwardRef<MazeBoardRef, MazeBoardProps>(
     const maxCellHeight = availableHeight / Math.max(1, rows);
     const cellSize = Math.min(Math.floor(Math.min(maxCellWidth, maxCellHeight)), 72);
 
-    const boardWidth = cellSize * cols;
-    const boardHeight = cellSize * rows;
+    const renderedCellSize = cellSize * renderZoom;
+    const boardWidth = renderedCellSize * cols;
+    const boardHeight = renderedCellSize * rows;
 
     const notifyZoomChange = (val: number) => {
       onZoomChange?.(Math.round(val * 10) / 10);
@@ -100,34 +102,39 @@ export const MazeBoard = forwardRef<MazeBoardRef, MazeBoardProps>(
     // Reset zoom on level change
     useEffect(() => {
       scale.value = withTiming(1.0, { duration: 200 });
-      savedScale.value = 1.0;
+      setRenderZoom(1.0);
       translateX.value = withTiming(0, { duration: 200 });
       savedTranslateX.value = 0;
       translateY.value = withTiming(0, { duration: 200 });
       savedTranslateY.value = 0;
       notifyZoomChange(1.0);
-    }, [rows, cols, scale, savedScale, translateX, savedTranslateX, translateY, savedTranslateY]);
+    }, [rows, cols, scale, translateX, savedTranslateX, translateY, savedTranslateY]);
 
-    // Button Zoom Helpers
-    const setBoardZoom = (targetScale: number) => {
+    const commitZoom = (targetScale: number) => {
       const clamped = Math.min(Math.max(targetScale, 1.0), 3.5);
-      scale.value = withSpring(clamped, { damping: 18, stiffness: 220 });
-      savedScale.value = clamped;
+      setRenderZoom(clamped);
+      scale.value = 1.0;
+      notifyZoomChange(clamped);
       if (clamped <= 1.05) {
         translateX.value = withTiming(0, { duration: 200 });
         translateY.value = withTiming(0, { duration: 200 });
         savedTranslateX.value = 0;
         savedTranslateY.value = 0;
       }
-      notifyZoomChange(clamped);
+    };
+
+    // Button Zoom Helpers
+    const setBoardZoom = (targetScale: number) => {
+      const clamped = Math.min(Math.max(targetScale, 1.0), 3.5);
+      commitZoom(clamped);
     };
 
     const handleZoomIn = () => {
-      setBoardZoom(Math.round((scale.value + 0.5) * 10) / 10);
+      setBoardZoom(Math.round((renderZoom + 0.5) * 10) / 10);
     };
 
     const handleZoomOut = () => {
-      setBoardZoom(Math.round((scale.value - 0.5) * 10) / 10);
+      setBoardZoom(Math.round((renderZoom - 0.5) * 10) / 10);
     };
 
     const handleResetZoom = () => {
@@ -142,30 +149,20 @@ export const MazeBoard = forwardRef<MazeBoardRef, MazeBoardProps>(
         zoomOut: handleZoomOut,
         resetZoom: handleResetZoom,
       }),
-      [scale]
+      [renderZoom]
     );
 
     // 1. Pinch Gesture
     const pinchGesture = Gesture.Pinch()
       .onUpdate((e) => {
         'worklet';
-        const nextScale = Math.min(Math.max(savedScale.value * e.scale, 1.0), 3.5);
-        scale.value = nextScale;
+        const nextZoom = Math.min(Math.max(renderZoom * e.scale, 1.0), 3.5);
+        scale.value = nextZoom / renderZoom;
       })
       .onEnd(() => {
         'worklet';
-        savedScale.value = scale.value;
-        if (scale.value <= 1.05) {
-          scale.value = withTiming(1.0);
-          savedScale.value = 1.0;
-          translateX.value = withTiming(0);
-          translateY.value = withTiming(0);
-          savedTranslateX.value = 0;
-          savedTranslateY.value = 0;
-          runOnJS(notifyZoomChange)(1.0);
-        } else {
-          runOnJS(notifyZoomChange)(scale.value);
-        }
+        const finalZoom = Math.min(Math.max(renderZoom * scale.value, 1.0), 3.5);
+        runOnJS(commitZoom)(finalZoom);
       });
 
     // 2. Pan Gesture (when zoomed)
@@ -173,9 +170,11 @@ export const MazeBoard = forwardRef<MazeBoardRef, MazeBoardProps>(
       .minDistance(8)
       .onUpdate((e) => {
         'worklet';
-        if (scale.value > 1.05) {
-          const maxPanX = Math.max(0, (boardWidth * (scale.value - 1)) / 2 + 40);
-          const maxPanY = Math.max(0, (boardHeight * (scale.value - 1)) / 2 + 40);
+        if (renderZoom * scale.value > 1.05) {
+          const scaledWidth = boardWidth * scale.value;
+          const scaledHeight = boardHeight * scale.value;
+          const maxPanX = Math.max(0, (scaledWidth - containerSize.width) / 2 + 40);
+          const maxPanY = Math.max(0, (scaledHeight - containerSize.height) / 2 + 40);
           const targetX = savedTranslateX.value + e.translationX;
           const targetY = savedTranslateY.value + e.translationY;
           translateX.value = Math.min(Math.max(targetX, -maxPanX), maxPanX);
@@ -194,18 +193,10 @@ export const MazeBoard = forwardRef<MazeBoardRef, MazeBoardProps>(
       .maxDuration(250)
       .onEnd(() => {
         'worklet';
-        if (scale.value > 1.25) {
-          scale.value = withTiming(1.0);
-          savedScale.value = 1.0;
-          translateX.value = withTiming(0);
-          translateY.value = withTiming(0);
-          savedTranslateX.value = 0;
-          savedTranslateY.value = 0;
-          runOnJS(notifyZoomChange)(1.0);
+        if (renderZoom > 1.25) {
+          runOnJS(commitZoom)(1.0);
         } else {
-          scale.value = withTiming(2.2);
-          savedScale.value = 2.2;
-          runOnJS(notifyZoomChange)(2.2);
+          runOnJS(commitZoom)(2.2);
         }
       });
 
@@ -221,10 +212,10 @@ export const MazeBoard = forwardRef<MazeBoardRef, MazeBoardProps>(
 
     // Direct board coordinate touch handler with near-cell fallback for instant, responsive tapping
     const handleBoardTouch = (event: GestureResponderEvent) => {
-      if (cellSize <= 0) return;
+      if (renderedCellSize <= 0) return;
       const { locationX, locationY } = event.nativeEvent;
-      const col = Math.floor(locationX / cellSize);
-      const row = Math.floor(locationY / cellSize);
+      const col = Math.floor(locationX / renderedCellSize);
+      const row = Math.floor(locationY / renderedCellSize);
 
       // 1. Direct cell hit check
       if (row >= 0 && row < rows && col >= 0 && col < cols) {
@@ -244,7 +235,7 @@ export const MazeBoard = forwardRef<MazeBoardRef, MazeBoardProps>(
       }
 
       // 2. Fallback: nearest arrow-cell center in pixel space
-      const maxDistPx = Math.max(cellSize * 1.3, 24);
+      const maxDistPx = Math.max(renderedCellSize * 1.3, 24);
       const maxDistSq = maxDistPx * maxDistPx;
       let bestArrow: MultiCellArrowType | null = null;
       let bestDistSq = maxDistSq;
@@ -257,8 +248,8 @@ export const MazeBoard = forwardRef<MazeBoardRef, MazeBoardProps>(
         }
 
         for (const p of pts) {
-          const cx = (p.col + 0.5) * cellSize;
-          const cy = (p.row + 0.5) * cellSize;
+          const cx = (p.col + 0.5) * renderedCellSize;
+          const cy = (p.row + 0.5) * renderedCellSize;
           const dx = cx - locationX;
           const dy = cy - locationY;
           const distSq = dx * dx + dy * dy;
@@ -310,7 +301,7 @@ export const MazeBoard = forwardRef<MazeBoardRef, MazeBoardProps>(
                         <MultiCellArrow
                           key={arrow.id}
                           arrow={arrow}
-                          cellSize={cellSize}
+                          cellSize={renderedCellSize}
                         />
                       );
                     })}
@@ -327,7 +318,7 @@ export const MazeBoard = forwardRef<MazeBoardRef, MazeBoardProps>(
                       <AnimatedArrow
                         key={arrow.id}
                         arrow={arrow}
-                        cellSize={cellSize}
+                        cellSize={renderedCellSize}
                         boardWidth={boardWidth}
                         boardHeight={boardHeight}
                         isRemoving={isRemoving}

@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { LevelProgress } from '../types/game';
+import { GameSettings, LevelProgress } from '../types/game';
 import { TOTAL_LEVELS } from '../engine/handcraftedMazes';
 
 const KEYS = {
@@ -9,11 +9,44 @@ const KEYS = {
   WIN_STREAK: '@arrow_puzzle_win_streak',
   LAST_PLAYED_LEVEL: '@arrow_puzzle_last_played_level',
   CLAIMED_AWARDS: '@arrow_puzzle_claimed_awards',
+  SETTINGS: '@arrow_puzzle_settings',
+};
+
+export const DEFAULT_GAME_SETTINGS: GameSettings = {
+  soundEnabled: true,
+  hapticsEnabled: true,
+  vibrationOnBump: true,
+  darkMode: false,
 };
 
 export const STREAK_HINT_REWARD_INTERVAL = 3;
-export const AWARD_LEVEL_INTERVAL = 10;
-export const AWARD_HINT_REWARD = 3;
+export const AWARD_MILESTONES = [
+  { levels: 5, hints: 1 },
+  { levels: 10, hints: 1 },
+  { levels: 20, hints: 2 },
+  { levels: 35, hints: 2 },
+  { levels: 50, hints: 3 },
+  { levels: 70, hints: 2 },
+  { levels: 90, hints: 3 },
+  { levels: 110, hints: 3 },
+  { levels: 135, hints: 3 },
+  { levels: 160, hints: 4 },
+  { levels: 190, hints: 4 },
+  { levels: 220, hints: 4 },
+  { levels: 250, hints: 5 },
+  { levels: 280, hints: 4 },
+  { levels: 310, hints: 4 },
+  { levels: 340, hints: 5 },
+  { levels: 370, hints: 5 },
+  { levels: 400, hints: 6 },
+  { levels: 425, hints: 5 },
+  { levels: 450, hints: 6 },
+  { levels: 465, hints: 5 },
+  { levels: 475, hints: 5 },
+  { levels: 485, hints: 6 },
+  { levels: 495, hints: 7 },
+  { levels: 500, hints: 10 },
+] as const;
 
 export interface BoosterInventory {
   hints: number;
@@ -28,6 +61,23 @@ const DEFAULT_BOOSTERS: BoosterInventory = {
 };
 
 export const GameStorage = {
+  async getSettings(): Promise<GameSettings> {
+    try {
+      const data = await AsyncStorage.getItem(KEYS.SETTINGS);
+      return data ? { ...DEFAULT_GAME_SETTINGS, ...JSON.parse(data) } : DEFAULT_GAME_SETTINGS;
+    } catch {
+      return DEFAULT_GAME_SETTINGS;
+    }
+  },
+
+  async saveSettings(settings: GameSettings): Promise<void> {
+    try {
+      await AsyncStorage.setItem(KEYS.SETTINGS, JSON.stringify(settings));
+    } catch (e) {
+      console.warn('Failed to save settings', e);
+    }
+  },
+
   async getAllProgress(): Promise<Record<number, LevelProgress>> {
     try {
       const data = await AsyncStorage.getItem(KEYS.PROGRESS);
@@ -131,13 +181,10 @@ export const GameStorage = {
         this.getBoosters(),
       ]);
       const completedCount = Object.values(progress).filter((item) => item.completed).length;
-      const validMilestone =
-        milestone >= AWARD_LEVEL_INTERVAL &&
-        milestone <= TOTAL_LEVELS &&
-        milestone % AWARD_LEVEL_INTERVAL === 0;
-      if (!validMilestone || completedCount < milestone || claimed.includes(milestone)) return null;
+      const award = AWARD_MILESTONES.find((item) => item.levels === milestone);
+      if (!award || completedCount < milestone || claimed.includes(milestone)) return null;
 
-      const nextBoosters = { ...boosters, hints: boosters.hints + AWARD_HINT_REWARD };
+      const nextBoosters = { ...boosters, hints: boosters.hints + award.hints };
       await AsyncStorage.multiSet([
         [KEYS.BOOSTERS, JSON.stringify(nextBoosters)],
         [KEYS.CLAIMED_AWARDS, JSON.stringify([...claimed, milestone].sort((a, b) => a - b))],

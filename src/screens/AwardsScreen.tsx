@@ -6,8 +6,7 @@ import Svg, { Circle, Defs, G, LinearGradient, Path, Polygon, Rect, Stop } from 
 import { RootStackParamList } from '../types/game';
 import { TOTAL_LEVELS } from '../engine/handcraftedMazes';
 import {
-  AWARD_HINT_REWARD,
-  AWARD_LEVEL_INTERVAL,
+  AWARD_MILESTONES,
   GameStorage,
 } from '../storage/gameStorage';
 
@@ -116,10 +115,7 @@ export const AwardsScreen: React.FC<Props> = ({ navigation }) => {
   const [completedCount, setCompletedCount] = useState(0);
   const [claimed, setClaimed] = useState<number[]>([]);
   const [hints, setHints] = useState(0);
-  const milestones = useMemo(
-    () => Array.from({ length: Math.floor(TOTAL_LEVELS / AWARD_LEVEL_INTERVAL) }, (_, i) => (i + 1) * AWARD_LEVEL_INTERVAL),
-    []
-  );
+  const milestones = useMemo(() => AWARD_MILESTONES.map((award) => award.levels), []);
 
   const load = useCallback(async () => {
     const [progress, claimedAwards, boosters] = await Promise.all([
@@ -136,7 +132,7 @@ export const AwardsScreen: React.FC<Props> = ({ navigation }) => {
   useEffect(() => navigation.addListener('focus', load), [load, navigation]);
 
   const nextMilestone = milestones.find((milestone) => milestone > completedCount) ?? TOTAL_LEVELS;
-  const previousMilestone = Math.floor(completedCount / AWARD_LEVEL_INTERVAL) * AWARD_LEVEL_INTERVAL;
+  const previousMilestone = [...milestones].reverse().find((milestone) => milestone <= completedCount) ?? 0;
   const segmentProgress = nextMilestone === previousMilestone
     ? 1
     : (completedCount - previousMilestone) / (nextMilestone - previousMilestone);
@@ -144,7 +140,8 @@ export const AwardsScreen: React.FC<Props> = ({ navigation }) => {
   const claim = async (milestone: number) => {
     if (AWARDS_PREVIEW_MODE) {
       if (claimed.includes(milestone)) return;
-      setHints((current) => current + AWARD_HINT_REWARD);
+      const previewReward = AWARD_MILESTONES.find((award) => award.levels === milestone)?.hints ?? 0;
+      setHints((current) => current + previewReward);
       setClaimed((current) => [...current, milestone]);
       return;
     }
@@ -194,8 +191,9 @@ export const AwardsScreen: React.FC<Props> = ({ navigation }) => {
           </>
         }
         renderItem={({ item: milestone }) => {
-          const trophyIndex = milestone / AWARD_LEVEL_INTERVAL - 1;
+          const trophyIndex = milestones.indexOf(milestone);
           const [tierName, tierDark, tierLight] = TROPHY_TIERS[trophyIndex];
+          const hintReward = AWARD_MILESTONES[trophyIndex].hints;
           const isClaimed = claimed.includes(milestone);
           const unlocked = completedCount >= milestone;
           return (
@@ -212,7 +210,7 @@ export const AwardsScreen: React.FC<Props> = ({ navigation }) => {
               </View>
               <Text style={[styles.tierName, unlocked && { color: tierDark }]}>{tierName} Trophy</Text>
               <Text style={styles.milestoneTitle}>{milestone} Levels</Text>
-              <Text style={styles.rewardText}>+{AWARD_HINT_REWARD} hints</Text>
+              <Text style={styles.rewardText}>+{hintReward} {hintReward === 1 ? 'hint' : 'hints'}</Text>
               {isClaimed ? (
                 <View style={styles.claimedPill}><Text style={styles.claimedText}>✓ Claimed</Text></View>
               ) : unlocked ? (

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, type MutableRefObject } from 'react';
 import { MultiCellArrow, LevelDefinition, LevelProgress, GameSettings } from '../types/game';
 import { buildOccupancyGrid, checkRaycast } from '../engine/raycast';
 import { getBestHint } from '../engine/solver';
@@ -52,11 +52,35 @@ export function useEasybrainGame({ level, settings, onVictory }: UseEasybrainGam
   const [boosters, setBoosters] = useState<BoosterInventory>({ hints: 3, undos: 3, bombs: 2 });
   const [winStreak, setWinStreak] = useState<number>(0);
   const [streakBonusJustAwarded, setStreakBonusJustAwarded] = useState<boolean>(false);
+  const flightFallbacksRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const bumpFallbacksRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   const onVictoryRef = useRef(onVictory);
   onVictoryRef.current = onVictory;
 
   const { playTap, playBump, playSuccess, playError } = useSoundHaptics(settings);
+
+  const clearFallback = (
+    timers: MutableRefObject<Map<string, ReturnType<typeof setTimeout>>>,
+    arrowId: string
+  ) => {
+    const timer = timers.current.get(arrowId);
+    if (timer) clearTimeout(timer);
+    timers.current.delete(arrowId);
+  };
+
+  // Arrow ids repeat between levels. Never allow an animation fallback from a
+  // previous board to remove or reset an arrow on the next board.
+  useEffect(() => {
+    const flightFallbacks = flightFallbacksRef.current;
+    const bumpFallbacks = bumpFallbacksRef.current;
+    return () => {
+      flightFallbacks.forEach(clearTimeout);
+      bumpFallbacks.forEach(clearTimeout);
+      flightFallbacks.clear();
+      bumpFallbacks.clear();
+    };
+  }, [level.id]);
 
   const initLevel = useCallback(() => {
     setActiveArrows(buildArrowsFromLevel(level));
@@ -93,6 +117,7 @@ export function useEasybrainGame({ level, settings, onVictory }: UseEasybrainGam
 
   // Bump Complete Handler
   const handleBumpComplete = useCallback((arrowId: string) => {
+    clearFallback(bumpFallbacksRef, arrowId);
     setBumpingArrowIds((prev) => {
       if (!prev.has(arrowId)) return prev;
       const next = new Set(prev);
@@ -104,6 +129,7 @@ export function useEasybrainGame({ level, settings, onVictory }: UseEasybrainGam
   // Flight Complete Handler
   const handleFlightComplete = useCallback(
     (arrowId: string) => {
+      clearFallback(flightFallbacksRef, arrowId);
       // Remove the arrow from the board model when its flight finishes.
       setActiveArrows((prev) => {
         const next = prev.filter((a) => a.id !== arrowId);
@@ -180,9 +206,12 @@ export function useEasybrainGame({ level, settings, onVictory }: UseEasybrainGam
         }
 
         // Safety fallback timer: guarantee removal completes even if frame callback drops
-        setTimeout(() => {
+        clearFallback(flightFallbacksRef, arrow.id);
+        const flightTimer = setTimeout(() => {
+          flightFallbacksRef.current.delete(arrow.id);
           handleFlightComplete(arrow.id);
         }, 2500);
+        flightFallbacksRef.current.set(arrow.id, flightTimer);
       } else {
         // Collision / Blocked Path!
         playBump();
@@ -190,9 +219,12 @@ export function useEasybrainGame({ level, settings, onVictory }: UseEasybrainGam
         setMoves((prev) => prev + 1);
 
         // Safety fallback timer: guarantee bump state resets even if spring callback drops
-        setTimeout(() => {
+        clearFallback(bumpFallbacksRef, arrow.id);
+        const bumpTimer = setTimeout(() => {
+          bumpFallbacksRef.current.delete(arrow.id);
           handleBumpComplete(arrow.id);
         }, 700);
+        bumpFallbacksRef.current.set(arrow.id, bumpTimer);
 
         setLives((prev) => {
           const next = prev - 1;
