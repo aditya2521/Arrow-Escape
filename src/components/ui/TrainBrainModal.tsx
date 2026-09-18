@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, Modal, Pressable } from 'react-native';
+import React, { useEffect } from 'react';
+import { BackHandler, Modal, Platform, View, Text, StyleSheet, Pressable } from 'react-native';
 import { ConfettiView } from './ConfettiView';
 import { splitEmojiName } from '../../theme/chapters';
 
@@ -30,6 +30,23 @@ export const TrainBrainModal: React.FC<TrainBrainModalProps> = ({
 }) => {
   const { emoji, name } = splitEmojiName(levelName);
 
+  // Keep this overlay in the existing React view hierarchy. On Android/Fabric,
+  // presenting a native Modal while the last bump animation is committing can
+  // occasionally leave the native dialog window unattached even though
+  // `visible` is true. The board is then correctly locked by game-over state,
+  // but the player sees no dialog and appears stuck.
+  useEffect(() => {
+    if (!visible || Platform.OS !== 'android') return;
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (isGameOver) onRetry();
+      else onHome();
+      return true;
+    });
+
+    return () => subscription.remove();
+  }, [visible, isGameOver, onRetry, onHome]);
+
   // Theme differs for victory vs game-over
   const theme = isVictory
     ? {
@@ -55,58 +72,76 @@ export const TrainBrainModal: React.FC<TrainBrainModalProps> = ({
         primaryShadow: '#EA580C',
       };
 
-  return (
-    <Modal visible={visible} transparent animationType="fade">
-      <View style={styles.overlay}>
-        {isVictory && <ConfettiView />}
+  if (!visible) return null;
 
-        <View style={styles.card}>
-          {/* Playful header with big emoji */}
-          <View style={[styles.header, { backgroundColor: theme.headerBg }]}>
-            <View style={styles.heroEmojiBubble}>
-              <Text style={styles.heroEmoji}>{theme.heroEmoji}</Text>
+  const content = (
+    <>
+      {isVictory && <ConfettiView />}
+
+      <View style={styles.card}>
+        {/* Playful header with big emoji */}
+        <View style={[styles.header, { backgroundColor: theme.headerBg }]}>
+          <View style={styles.heroEmojiBubble}>
+            <Text style={styles.heroEmoji}>{theme.heroEmoji}</Text>
+          </View>
+          <Text style={[styles.title, { color: theme.titleColor }]}>{theme.title}</Text>
+          <Text style={[styles.subtitle, { color: theme.titleColor }]}>{theme.subtitle}</Text>
+        </View>
+
+        {/* Level chip + message */}
+        <View style={styles.body}>
+          <View style={styles.levelChip}>
+            <Text style={styles.levelChipEmoji}>{emoji}</Text>
+            <View>
+              <Text style={styles.levelChipKicker}>LEVEL {levelId}</Text>
+              <Text style={styles.levelChipName} numberOfLines={1}>
+                {name}
+              </Text>
             </View>
-            <Text style={[styles.title, { color: theme.titleColor }]}>{theme.title}</Text>
-            <Text style={[styles.subtitle, { color: theme.titleColor }]}>{theme.subtitle}</Text>
           </View>
 
-          {/* Level chip + message */}
-          <View style={styles.body}>
-            <View style={styles.levelChip}>
-              <Text style={styles.levelChipEmoji}>{emoji}</Text>
-              <View>
-                <Text style={styles.levelChipKicker}>LEVEL {levelId}</Text>
-                <Text style={styles.levelChipName} numberOfLines={1}>
-                  {name}
-                </Text>
-              </View>
-            </View>
+          <Text style={styles.message}>{theme.message}</Text>
 
-            <Text style={styles.message}>{theme.message}</Text>
+          {/* Actions */}
+          <Pressable
+            style={({ pressed }) => [
+              styles.primaryButton,
+              { backgroundColor: theme.primaryBg, shadowColor: theme.primaryShadow },
+              pressed && styles.pressed,
+            ]}
+            onPress={isVictory ? onNextLevel : onRetry}
+          >
+            <Text style={styles.primaryButtonText}>{theme.primaryLabel}</Text>
+          </Pressable>
 
-            {/* Actions */}
-            <Pressable
-              style={({ pressed }) => [
-                styles.primaryButton,
-                { backgroundColor: theme.primaryBg, shadowColor: theme.primaryShadow },
-                pressed && styles.pressed,
-              ]}
-              onPress={isVictory ? onNextLevel : onRetry}
-            >
-              <Text style={styles.primaryButtonText}>{theme.primaryLabel}</Text>
-            </Pressable>
-
-            <Pressable
-              style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressedSubtle]}
-              onPress={onHome}
-            >
-              <Text style={styles.secondaryButtonIcon}>🏠</Text>
-              <Text style={styles.secondaryButtonText}>Home</Text>
-            </Pressable>
-          </View>
+          <Pressable
+            style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressedSubtle]}
+            onPress={onHome}
+          >
+            <Text style={styles.secondaryButtonIcon}>🏠</Text>
+            <Text style={styles.secondaryButtonText}>Home</Text>
+          </Pressable>
         </View>
       </View>
-    </Modal>
+    </>
+  );
+
+  if (Platform.OS === 'ios') {
+    return (
+      <Modal visible transparent animationType="fade">
+        <View style={styles.overlay}>{content}</View>
+      </Modal>
+    );
+  }
+
+  return (
+    <View
+      style={[styles.overlay, styles.androidOverlay]}
+      accessibilityViewIsModal
+      accessibilityLiveRegion="assertive"
+    >
+      {content}
+    </View>
   );
 };
 
@@ -117,6 +152,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
+  },
+  androidOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 1000,
+    elevation: 1000,
   },
   card: {
     width: '100%',

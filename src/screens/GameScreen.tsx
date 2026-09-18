@@ -89,6 +89,13 @@ export const GameScreen: React.FC<GameScreenProps> = ({ route, navigation }) => 
   };
 
   const handleHome = () => {
+    if (isVictory) {
+      // Guarantee Home reads the next level even if the broader progress write
+      // is still finishing when the player taps Home immediately after a win.
+      void GameStorage.saveLastPlayedLevel(Math.min(TOTAL_LEVELS, level.id + 1))
+        .finally(() => navigation.navigate('Home'));
+      return;
+    }
     navigation.navigate('Home');
   };
 

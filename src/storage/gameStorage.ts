@@ -219,6 +219,7 @@ export const GameStorage = {
       await AsyncStorage.multiRemove([
         KEYS.PROGRESS,
         KEYS.UNLOCKED_LEVEL,
+        KEYS.LAST_PLAYED_LEVEL,
         KEYS.WIN_STREAK,
         KEYS.CLAIMED_AWARDS,
       ]);

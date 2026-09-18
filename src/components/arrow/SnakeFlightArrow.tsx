@@ -12,6 +12,13 @@ import Animated, {
 import { MultiCellArrow as MultiCellArrowType, Point } from '../../types/game';
 import { DIRECTION_VECTORS } from '../../engine/raycast';
 
+// These wrappers must have stable component identities. Creating them inside
+// SnakeFlightArrow makes React treat the SVG nodes as new component types on
+// every board render. Android can then briefly draw both the old native SVG
+// display list and its replacement while a flight is in progress.
+const AnimatedPath = Animated.createAnimatedComponent(Path);
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+
 interface SnakeFlightArrowProps {
   arrow: MultiCellArrowType;
   cellSize: number;
@@ -200,9 +207,6 @@ export const SnakeFlightArrow: React.FC<SnakeFlightArrowProps> = ({
       opacity,
     };
   });
-
-  const AnimatedPath = Animated.createAnimatedComponent(Path);
-  const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
   return (
     <Svg width="100%" height="100%" style={StyleSheet.absoluteFill} pointerEvents="none">

@@ -342,6 +342,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = ArrowEscape/ArrowEscape.entitlements;
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 3VVQ3VJ5ZP;
 				ENABLE_BITCODE = NO;
@@ -355,15 +356,15 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.0;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
 					"-lc++",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
-				PRODUCT_BUNDLE_IDENTIFIER = com.arrowescape.app;
-				PRODUCT_NAME = "ArrowEscape";
+				PRODUCT_BUNDLE_IDENTIFIER = com.adityajaiswal.arrowescape;
+				PRODUCT_NAME = ArrowEscape;
 				SWIFT_OBJC_BRIDGING_HEADER = "ArrowEscape/ArrowEscape-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -379,6 +380,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = ArrowEscape/ArrowEscape.entitlements;
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 3VVQ3VJ5ZP;
 				INFOPLIST_FILE = ArrowEscape/Info.plist;
@@ -387,15 +389,15 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.0;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
 					"-lc++",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
-				PRODUCT_BUNDLE_IDENTIFIER = com.arrowescape.app;
-				PRODUCT_NAME = "ArrowEscape";
+				PRODUCT_BUNDLE_IDENTIFIER = com.adityajaiswal.arrowescape;
+				PRODUCT_NAME = ArrowEscape;
 				SWIFT_OBJC_BRIDGING_HEADER = "ArrowEscape/ArrowEscape-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";

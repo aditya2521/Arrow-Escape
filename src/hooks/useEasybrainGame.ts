@@ -54,6 +54,7 @@ export function useEasybrainGame({ level, settings, onVictory }: UseEasybrainGam
   const [streakBonusJustAwarded, setStreakBonusJustAwarded] = useState<boolean>(false);
   const flightFallbacksRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const bumpFallbacksRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const gameOverHandledRef = useRef(false);
 
   const onVictoryRef = useRef(onVictory);
   onVictoryRef.current = onVictory;
@@ -90,8 +91,23 @@ export function useEasybrainGame({ level, settings, onVictory }: UseEasybrainGam
     setLives(MAX_LIVES);
     setIsVictory(false);
     setIsGameOver(false);
+    gameOverHandledRef.current = false;
     setMoves(0);
   }, [level]);
+
+  // Keep the game-over transition outside the setLives updater. Scheduling
+  // other state updates and native sound/haptics from inside a state updater
+  // is unreliable with Android's concurrent renderer and could leave the
+  // board locked at zero hearts without ever presenting the modal.
+  useEffect(() => {
+    if (lives > 0 || gameOverHandledRef.current) return;
+
+    gameOverHandledRef.current = true;
+    setIsGameOver(true);
+    playError();
+    setWinStreak(0);
+    void GameStorage.saveWinStreak(0);
+  }, [lives, playError]);
 
   // Re-initialize when the level changes (skipping the initial mount — lazy state already covers it)
   const didMountRef = useRef(false);
@@ -227,15 +243,7 @@ export function useEasybrainGame({ level, settings, onVictory }: UseEasybrainGam
         bumpFallbacksRef.current.set(arrow.id, bumpTimer);
 
         setLives((prev) => {
-          const next = prev - 1;
-          if (next <= 0) {
-            setIsGameOver(true);
-            playError();
-            // Losing breaks the streak
-            setWinStreak(0);
-            GameStorage.saveWinStreak(0);
-          }
-          return Math.max(0, next);
+          return Math.max(0, prev - 1);
         });
       }
     },

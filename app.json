@@ -15,14 +15,15 @@
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.arrowescape.app"
+      "requireFullScreen": true,
+      "bundleIdentifier": "com.adityajaiswal.arrowescape"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#000000"
       },
-      "package": "com.arrowescape.app"
+      "package": "com.adityajaiswal.arrowescape"
     },
     "web": {
       "bundler": "metro",

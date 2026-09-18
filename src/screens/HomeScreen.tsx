@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
 import Svg, { Path, G } from 'react-native-svg';
 import { RootStackParamList } from '../types/game';
 import { TOTAL_LEVELS } from '../engine/handcraftedMazes';
+import { GameStorage } from '../storage/gameStorage';
 
 type HomeScreenProps = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
@@ -16,6 +18,33 @@ const PLAY = '#2563EB';
 const PLAY_DARK = '#1D4ED8';
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
+  const [lastPlayedLevel, setLastPlayedLevel] = useState(1);
+  const captureLevel = __DEV__
+    ? Number(
+        new URLSearchParams(
+          (globalThis as typeof globalThis & { location?: { search?: string } }).location?.search ?? ''
+        ).get('captureLevel')
+      )
+    : Number.NaN;
+  const hasCaptureLevel = Number.isInteger(captureLevel)
+    && captureLevel >= 1
+    && captureLevel <= TOTAL_LEVELS;
+  const startingLevel = hasCaptureLevel ? captureLevel : lastPlayedLevel;
+
+  // Home remains mounted underneath the Game screen. Refresh on focus so a
+  // newly completed level is reflected as soon as the player returns home.
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      void GameStorage.getLastPlayedLevel().then((levelId) => {
+        if (active) setLastPlayedLevel(levelId);
+      });
+      return () => {
+        active = false;
+      };
+    }, [])
+  );
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
@@ -92,14 +121,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         <View style={styles.actions}>
           <Pressable
             style={({ pressed }) => [styles.playButton, pressed && styles.pressed]}
-            onPress={() => navigation.navigate('Game', { levelId: 1 })}
+            onPress={() => navigation.navigate('Game', { levelId: startingLevel })}
           >
             <Svg width={26} height={26} viewBox="0 0 24 24" fill="#FFFFFF">
               <Path d="M8 5v14l11-7z" />
             </Svg>
             <View>
               <Text style={styles.playButtonText}>Start playing</Text>
-              <Text style={styles.playButtonSubtext}>Begin at Level 1</Text>
+              <Text style={styles.playButtonSubtext}>Begin at Level {startingLevel}</Text>
             </View>
           </Pressable>
 

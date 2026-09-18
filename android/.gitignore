@@ -1,0 +1,20 @@
+# OSX
+#
+.DS_Store
+
+# Android/IntelliJ
+#
+build/
+.idea
+.gradle
+local.properties
+*.iml
+*.hprof
+.cxx/
+
+# Private Google Play upload signing credentials
+keystore.properties
+app/*.keystore
+
+# Bundle artifacts
+*.jsbundle
