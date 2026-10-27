@@ -3,6 +3,9 @@ apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
 def projectRoot = rootDir.getAbsoluteFile().getParentFile().getAbsolutePath()
+// Explicitly opt in for local compatibility checks when the upload key is absent.
+// Normal release builds must still use the original Google Play upload key.
+def unsignedRelease = (findProperty('android.unsignedRelease') ?: 'false').toBoolean()
 
 /**
  * This is the configuration block to customize your React Native Android app.
@@ -91,7 +94,7 @@ android {
         applicationId 'com.adityajaiswal.arrowescape'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 3
+        versionCode 5
         versionName "1.0.0"
     }
     signingConfigs {
@@ -103,15 +106,17 @@ android {
         }
         release {
             def keystorePropertiesFile = rootProject.file('keystore.properties')
-            if (!keystorePropertiesFile.exists()) {
-                throw new GradleException('Missing android/keystore.properties; run scripts/generate-android-upload-key.sh')
+            if (!unsignedRelease) {
+                if (!keystorePropertiesFile.exists()) {
+                    throw new GradleException('Restore the original android/keystore.properties and upload keystore. Use -Pandroid.unsignedRelease=true only for local validation.')
+                }
+                def keystoreProperties = new Properties()
+                keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+                storeFile rootProject.file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
             }
-            def keystoreProperties = new Properties()
-            keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
-            storeFile rootProject.file(keystoreProperties['storeFile'])
-            storePassword keystoreProperties['storePassword']
-            keyAlias keystoreProperties['keyAlias']
-            keyPassword keystoreProperties['keyPassword']
         }
     }
     buildTypes {
@@ -119,9 +124,8 @@ android {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.release
+            // Updates must use the upload key already registered with Google Play.
+            signingConfig unsignedRelease ? null : signingConfigs.release
             shrinkResources (findProperty('android.enableShrinkResourcesInReleaseBuilds')?.toBoolean() ?: false)
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"

@@ -2,11 +2,9 @@
 // Payloads stay in JSON chunks so TypeScript does not infer a 500-level AST
 // and every tracked file remains safely below GitHub's 100 MB limit.
 import { LevelDefinition } from '../types/game';
-
 // Metro can expose JSON either directly (native) or under `default` (web/HMR).
 const unwrap = (data: LevelDefinition[] | { default: LevelDefinition[] }) =>
   Array.isArray(data) ? data : data.default;
-
 export const PRECOMPUTED_LEVELS: LevelDefinition[] = [
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   ...unwrap(require('./precomputedLevels-1.json')),

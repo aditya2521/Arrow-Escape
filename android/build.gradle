@@ -6,9 +6,9 @@ buildscript {
         minSdkVersion = Integer.parseInt(findProperty('android.minSdkVersion') ?: '24')
         compileSdkVersion = Integer.parseInt(findProperty('android.compileSdkVersion') ?: '36')
         targetSdkVersion = Integer.parseInt(findProperty('android.targetSdkVersion') ?: '36')
-        kotlinVersion = findProperty('android.kotlinVersion') ?: '1.9.25'
+        kotlinVersion = findProperty('android.kotlinVersion') ?: '2.0.21'
 
-        ndkVersion = "26.1.10909125"
+        ndkVersion = "27.1.12297006"
     }
     repositories {
         google()
@@ -22,6 +22,18 @@ buildscript {
 }
 
 apply plugin: "com.facebook.react.rootproject"
+
+// NDK r27 requires this opt-in for every source-built native library,
+// including Expo modules and autolinked dependencies.
+subprojects { subproject ->
+    ['com.android.application', 'com.android.library'].each { pluginId ->
+        subproject.plugins.withId(pluginId) {
+            subproject.android.defaultConfig.externalNativeBuild.cmake.arguments.add(
+                '-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON'
+            )
+        }
+    }
+}
 
 allprojects {
     repositories {

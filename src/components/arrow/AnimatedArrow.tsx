@@ -59,6 +59,7 @@ export const AnimatedArrow: React.FC<AnimatedArrowProps> = ({
       cancelAnimation(hintPulse);
       hintPulse.value = withTiming(1.0, { duration: 150 });
     }
+    return () => cancelAnimation(hintPulse);
   }, [isHinted, hintPulse]);
 
 

@@ -19,6 +19,7 @@
       "bundleIdentifier": "com.adityajaiswal.arrowescape"
     },
     "android": {
+      "versionCode": 4,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#000000"

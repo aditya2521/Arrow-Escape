@@ -7,6 +7,8 @@ import {
   TOTAL_LEVELS,
 } from '../engine/handcraftedMazes';
 import { MultiCellArrow } from '../types/game';
+import { hasSelfBlockingTail, repairSelfBlockingArrows } from '../engine/arrowGeometry';
+import { generateSnakeMazeLevel } from '../engine/mazeGenerator';
 
 describe('Easybrain MultiCellArrow Engine Tests', () => {
   it('instantly provides 500 unique level metadata records with 0 repeats', () => {
@@ -82,6 +84,59 @@ describe('Easybrain MultiCellArrow Engine Tests', () => {
 
     const hint = getBestHint(4, 4, arrows);
     expect(hint?.id).toBe('2');
+  });
+
+  it('repairs looping tails in all directions without removing cells or mutating the source', () => {
+    let path = [
+      { row: 2, col: 2 }, { row: 2, col: 3 }, { row: 2, col: 4 },
+      { row: 1, col: 4 }, { row: 0, col: 4 }, { row: 0, col: 3 },
+      { row: 0, col: 2 }, { row: 0, col: 1 }, { row: 0, col: 0 },
+      { row: 1, col: 0 }, { row: 2, col: 0 }, { row: 3, col: 0 },
+      { row: 4, col: 0 }, { row: 4, col: 1 }, { row: 4, col: 2 },
+      { row: 3, col: 2 },
+    ];
+    const cells = (points: typeof path) => points.map(({ row, col }) => `${row},${col}`).sort();
+    for (const direction of ['up', 'right', 'down', 'left'] as const) {
+      const arrow: MultiCellArrow = {
+        id: 'loop', head: path[path.length - 1], tail: path, direction,
+      };
+      expect(hasSelfBlockingTail(arrow)).toBe(true);
+      const fixed = repairSelfBlockingArrows(5, 5, [arrow]);
+      expect(fixed.length).toBeGreaterThan(1);
+      expect(cells(fixed.flatMap((piece) => piece.tail))).toEqual(cells(path));
+      expect(new Set(fixed.map((piece) => piece.id)).size).toBe(fixed.length);
+      expect(fixed.every((piece) => piece.tail.length >= 2)).toBe(true);
+      expect(arrow.tail).toBe(path);
+      expect(arrow.head).toBe(path[path.length - 1]);
+      expect(fixed.some(hasSelfBlockingTail)).toBe(false);
+      expect(isLevelSolvable(5, 5, fixed)).toBe(true);
+      expect(repairSelfBlockingArrows(5, 5, fixed)).toBe(fixed);
+      path = path.map(({ row, col }) => ({ row: col, col: 4 - row }));
+    }
+  });
+
+  it('keeps every arrow in all 500 shipped levels clear of its own exit ray and every board solvable', () => {
+    const invalidLevels: number[] = [];
+    for (const level of ALL_EASYBRAIN_LEVELS) {
+      const arrows = level.arrows.map((arrow, index) => ({
+        ...arrow, id: arrow.id ?? `a_${index}`,
+      }));
+      if (arrows.some(hasSelfBlockingTail) || !isLevelSolvable(level.rows, level.cols, arrows)) {
+        invalidLevels.push(level.id);
+      }
+    }
+    expect(invalidLevels).toEqual([]);
+  });
+
+  it('also prevents self-blocking tails in newly generated levels', () => {
+    const level = generateSnakeMazeLevel(
+      2026, 'Exit clarity', Array.from({ length: 16 }, () => '#'.repeat(16)),
+      'Hard', undefined, undefined, undefined, 0
+    );
+    expect(level.arrows.some(hasSelfBlockingTail)).toBe(false);
+    expect(isLevelSolvable(level.rows, level.cols, level.arrows.map((arrow, index) => ({
+      ...arrow, id: arrow.id ?? `a_${index}`,
+    })))).toBe(true);
   });
 
   it('ensures sample matrix levels have 0 cell overlaps, no jumps, and are 100% solvable', () => {

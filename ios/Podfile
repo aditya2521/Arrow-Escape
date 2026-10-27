@@ -52,6 +52,22 @@ target 'ArrowEscape' do
       :ccache_enabled => podfile_properties['apple.ccacheEnabled'] == 'true',
     )
 
+    # fmt 11.0.2 bundled by RN 0.77 fails consteval checks on Apple Clang 21+.
+    # Its header overrides compiler flags, so apply the workaround to the pod.
+    # https://github.com/fmtlib/fmt/issues/4740
+    fmt_header = installer.sandbox.root.join('fmt/include/fmt/base.h')
+    if fmt_header.exist?
+      original = File.read(fmt_header)
+      patched = original.sub(
+        '#elif defined(__apple_build_version__) && __apple_build_version__ < 14000029L',
+        '#elif defined(__apple_build_version__) && (__apple_build_version__ < 14000029L || __apple_build_version__ >= 21000000L)'
+      )
+      if patched != original
+        File.chmod(0644, fmt_header)
+        File.write(fmt_header, patched)
+      end
+    end
+
     # This is necessary for Xcode 14, because it signs resource bundles by default
     # when building for devices.
     installer.target_installation_results.pod_target_installation_results

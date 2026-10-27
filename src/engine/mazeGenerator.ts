@@ -1,5 +1,6 @@
 import { MultiCellArrow, Direction, Point, LevelDefinition } from '../types/game';
 import { isLevelSolvable } from './solver';
+import { repairSelfBlockingArrows } from './arrowGeometry';
 
 const DIRECTIONS: Direction[] = ['up', 'right', 'down', 'left'];
 
@@ -218,7 +219,7 @@ export function generateShapeMazeLevel(
     themeColor,
     bgColor,
     borderColor,
-    arrows: placedArrows.map((a) => ({
+    arrows: repairSelfBlockingArrows(rows, cols, placedArrows).map((a) => ({
       id: a.id,
       head: a.head,
       tail: a.tail,
@@ -379,7 +380,7 @@ export function generateInterlockingMazeLevel(
     difficulty,
     rows,
     cols,
-    arrows: placedArrows.map((a) => ({
+    arrows: repairSelfBlockingArrows(rows, cols, placedArrows).map((a) => ({
       id: a.id,
       head: a.head,
       tail: a.tail,
@@ -584,7 +585,7 @@ export function generateSnakeMazeLevel(
     themeColor,
     bgColor,
     borderColor,
-    arrows: arrows.map((a) => ({
+    arrows: repairSelfBlockingArrows(rows, cols, arrows).map((a) => ({
       id: a.id,
       head: a.head,
       tail: a.tail,
